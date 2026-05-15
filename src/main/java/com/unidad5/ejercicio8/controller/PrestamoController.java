@@ -3,6 +3,7 @@ package com.unidad5.ejercicio8.controller;
 import java.util.List;
 
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -40,6 +41,7 @@ public class PrestamoController {
     // ENDPOINT 5: GET /api/prestamos/mis-prestamos
     // Retorna los prestamos del usuario indicado.
     @GetMapping("/mis-prestamos")
+    @PreAuthorize("hasRole('LECTOR')")
     public List<Prestamo> misPrestamos(@RequestParam String username) {
         return prestamoService.findMine(username);
     }
@@ -54,6 +56,7 @@ public class PrestamoController {
     // ENDPOINT 7: PUT /api/prestamos/{id}/aprobar
     // Cambia el estado del prestamo a APROBADO.
     @PutMapping("/{id}/aprobar")
+    @PreAuthorize("hasRole('BIBLIOTECARIO')")
     public Prestamo aprobar(@PathVariable Long id) {
         return prestamoService.aprobar(id);
     }

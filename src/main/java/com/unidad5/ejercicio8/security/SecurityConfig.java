@@ -1,39 +1,43 @@
 package com.unidad5.ejercicio8.security;
 
-public final class SecurityConfig {
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
+import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
-    private SecurityConfig() {
+@Configuration
+@EnableWebSecurity
+@EnableMethodSecurity 
+public class SecurityConfig {
+
+    private final JwtAuthenticationFilter jwtAuthFilter;
+
+    public SecurityConfig(JwtAuthenticationFilter jwtAuthFilter) {
+        this.jwtAuthFilter = jwtAuthFilter;
     }
 
-    /*
-     * GUIA DE RESOLUCION
-     *
-     * Este archivo deberia concentrar la configuracion principal de Spring Security.
-     *
-     * Pasos sugeridos:
-     * 1. Anotar la clase con @Configuration.
-     * 2. Habilitar seguridad web y seguridad a nivel metodo si el ejercicio lo pide.
-     * 3. Declarar un bean SecurityFilterChain.
-     * 4. Desactivar CSRF si la API es stateless.
-     * 5. Configurar SessionCreationPolicy.STATELESS.
-     * 6. Declarar que /api/auth/register y /api/auth/login sean publicos.
-     * 7. Restringir /api/libros y /api/prestamos por rol.
-     * 8. Registrar el filtro JWT antes de UsernamePasswordAuthenticationFilter.
-     * 9. Configurar el manejo de errores 401 y 403.
-     *
-     * BEANS AUXILIARES
-     * En esta misma clase, o en una clase auxiliar si el docente lo prefiere, se suelen
-     * declarar:
-     * - PasswordEncoder
-     * - AuthenticationManager
-     * - AuthenticationProvider
-     *
-     * RESPUESTAS 401 Y 403
-     * Para mantener el ejercicio simple, no es obligatorio separar esas piezas en clases
-     * propias. Se puede resolver dentro de exceptionHandling(...) usando lambdas para:
-     * - devolver 401 si el usuario no esta autenticado
-     * - devolver 403 si el usuario esta autenticado pero no tiene permisos
-     *
-     * En esta entrega no se implementa seguridad real.
-     */
+    @Bean
+    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+        http
+            .csrf(AbstractHttpConfigurer::disable)
+            .authorizeHttpRequests(auth -> auth
+                .requestMatchers("/api/auth/**").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/libros").authenticated()
+                .requestMatchers(HttpMethod.POST, "/api/libros").hasAnyRole("BIBLIOTECARIO", "ADMIN")
+                .requestMatchers(HttpMethod.DELETE, "/api/libros/{id}").hasRole("ADMIN")
+                .requestMatchers(HttpMethod.POST, "/api/prestamos").hasRole("LECTOR")
+                .requestMatchers(HttpMethod.GET, "/api/prestamos").hasAnyRole("BIBLIOTECARIO", "ADMIN")
+                .anyRequest().authenticated()
+            )
+            .sessionManagement(sess -> sess.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+            .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
+
+        return http.build();
+    }
 }
